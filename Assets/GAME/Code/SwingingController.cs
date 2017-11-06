@@ -56,9 +56,10 @@ public class SwingingController : MonoBehaviour
         //gather and initialise objects
         m_targetVisual = GameObject.Find("TargetVisualGO");
         m_targetVisual.transform.parent = null;
+        m_ropeVisual = GetComponent<LineRenderer>();
 
         //gather components
-        m_controller = GetComponent<VRTK_ControllerReference>();
+        m_controller = VRTK_ControllerReference.GetControllerReference(transform.parent.gameObject);
     }
 
     void Update()
@@ -68,6 +69,13 @@ public class SwingingController : MonoBehaviour
 
         if (m_target == null)
             m_ropeVisual.enabled = false;
+
+        //update rope visual
+        if (m_ropeVisual != null && m_ropeVisual.enabled)
+        {
+            m_ropeVisual.SetPosition(0, m_target.transform.position);
+            m_ropeVisual.SetPosition(1, gameObject.transform.position);
+        }
     }
     
     void FixedUpdate() //this takes care of the swinging mechanic
@@ -155,16 +163,13 @@ public class SwingingController : MonoBehaviour
                     if (Vector3.Distance(m_playerBody.transform.position, m_target.transform.position) > m_maxRopeDistance)
                     {
                         //calculate prerequisites
-                        Vector3 targetVelocity = m_target.transform.position - m_targetPreviousPosition;
-                        Vector3 currentVelocity = m_playerBody.velocity;
-                        Vector3 targetNextPos = m_target.transform.position + targetVelocity;
-                        Vector3 nextPos = m_playerBody.transform.position + currentVelocity * Time.deltaTime;
-                        Vector3 dirToCenter = (nextPos - targetNextPos).normalized;
-                        Vector3 newPosOnCircle = targetNextPos + (dirToCenter * (m_maxRopeDistance));
+                        Vector3 nextPos = m_playerBody.transform.position + m_playerBody.velocity * Time.deltaTime;
+                        Vector3 dirToCenter = (nextPos - m_target.transform.position).normalized;
+                        Vector3 newPosOnCircle = dirToCenter * m_maxRopeDistance;
                         Vector3 newConstrainedDir = (newPosOnCircle - m_playerBody.transform.position).normalized;
 
                         //apply motion
-                        m_playerBody.velocity = currentVelocity.magnitude * newConstrainedDir;
+                        m_playerBody.velocity = m_playerBody.velocity.magnitude * newConstrainedDir;
                     }
 
                     #endregion
@@ -226,7 +231,7 @@ public class SwingingController : MonoBehaviour
                         m_swinging = true;
                         m_target = new GameObject();
 
-                        m_target.transform.position = raycastHit.collider.transform.position;
+                        m_target.transform.position = raycastHit.point;
 
                         //parent to object hit
                         m_target.transform.parent = raycastHit.collider.transform.parent;
@@ -237,13 +242,6 @@ public class SwingingController : MonoBehaviour
                         //pulling data
                         m_controllerMaxDistance = Vector3.Distance(gameObject.transform.position, m_target.transform.position);
                         m_maxRopeDistance = Vector3.Distance(m_playerBody.transform.position, m_target.transform.position);
-
-                        //update rope visual
-                        if (m_ropeVisual == null)
-                        {
-                            m_ropeVisual.SetPosition(0, m_target.transform.position);
-                            m_ropeVisual.SetPosition(0, gameObject.transform.position);
-                        }
 
                         Vector3 direction = m_target.transform.position - m_playerBody.transform.position;
 
